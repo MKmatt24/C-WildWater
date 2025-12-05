@@ -15,4 +15,9 @@ echo Bienvenue sur C-WildWater!
 end=`date +%s`
 
 runtime=$((end-start))
+
+echo "Press enter to quit..."
+read dummy
+
+echo $$ $BASHPID - | cat -
 echo "Temps d'execution: $runtime seconds"
