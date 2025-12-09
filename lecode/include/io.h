@@ -3,7 +3,7 @@
 #include<string.h>
 
 
-
+#define MAX_LINE 1024
 
 
 
