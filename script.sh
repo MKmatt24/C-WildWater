@@ -2,6 +2,8 @@
 
 START_TIME=$(date +%s%3N)
 
+C_EXECUTABLE="./C-Wild"
+
 
 #affiche la durée totale en millisecondes
 function display_time {
@@ -26,4 +28,15 @@ EOF
 
 echo Bienvenue sur C-WildWater!
 
+echo "---"
+
+#vérification de la compilation du programme C
+echo "Vérification et compilation du programme C..."
+
+make
+
+if [ $? -ne 0 ]; then
+  error_exit error_exit "La compilation du programme C a échoué. Vérifiez votre Makefile." 
+fi
+echo "Compilation réussie. Exécutable: $C_EXECUTABLE"
 
