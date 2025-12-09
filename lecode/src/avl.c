@@ -134,3 +134,42 @@ int search_usine(const void *a, const char *id) {
     Usine *u = (Usine*)a;
     return strcmp(u->id, id);
 }
+
+// Comparison functions for nodes
+int compare_noeuds(const void *a, const void *b) {
+    Noeud *na = (Noeud*)a;
+    Noeud *nb = (Noeud*)b;
+    return strcmp(na->id, nb->id);
+}
+
+int search_noeud(const void *a, const char *id) {
+    Noeud *n = (Noeud*)a;
+    return strcmp(n->id, id);
+}
+
+// Print functions for factories
+void print_usine(void *data, FILE *file) {
+    Usine *u = (Usine*)data;
+    fprintf(file, "%s;%.3f;%.3f;%.3f\n", u->id, u->max_volume, u->source_volume, u->real_volume);
+}
+
+// Free functions for factories
+void free_usine(void *data) {
+    Usine *u = (Usine*)data;
+    free(u->id);
+    free(u);
+}
+
+// Print functions for nodes
+void print_noeud(void *data, FILE *file) {
+    Noeud *n = (Noeud*)data;
+    fprintf(file, "%s\n", n->id);
+}
+
+// Free functions for nodes
+void free_noeud(void *data) {
+    Noeud *n = (Noeud*)data;
+    free(n->id);
+    free(n);
+}
+
