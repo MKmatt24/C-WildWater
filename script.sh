@@ -12,10 +12,10 @@ function display_time {
   fi
 }
 
-
-
 #affiche le temps d'éxecution en fin de script ou en cas d'erreur
 trap display_time EXIT
+
+
 cat << "EOF"
    ___  __      ___ _    ___      __    _           
   / __|_\ \    / (_) |__| \ \    / /_ _| |_ ___ _ _ 
@@ -26,12 +26,4 @@ EOF
 
 echo Bienvenue sur C-WildWater!
 
-end=`date +%s`
 
-runtime=$((end-start))
-
-echo "Press enter to quit..."
-read dummy
-
-echo $$ $BASHPID - | cat -
-echo "Temps d'execution: $runtime seconds"
