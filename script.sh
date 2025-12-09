@@ -40,3 +40,17 @@ if [ $? -ne 0 ]; then
 fi
 echo "Compilation réussie. Exécutable: $C_EXECUTABLE"
 
+#vérification et parsing des arguments
+
+DATA_FILE=$1
+COMMAND=$2
+ARG3=$3
+ARG4=$4
+
+if [ -z "$DATA_FILE" ] || [ -z "$COMMAND" ]; then
+    error_exit "Arguments incomplets. Utilisation: myScript.sh <fichier_csv> <commande> [args...]"
+fi
+
+if [ "$COMMAND" != "histo" ] && [ ! -z "$ARG4" ]; then
+    error_exit "Argument(s) supplémentaire(s) inattendu(s) après '$ARG3'."
+fi
