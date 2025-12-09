@@ -92,3 +92,45 @@ AVLNode* avl_insert(AVLNode *root, void *data, int (*compare)(const void*, const
     }
     return root;
 }
+
+// Generic search in AVL tree
+void* avl_search(AVLNode *root, const char *id, int (*compare)(const void*, const char*)) {
+    if (root == NULL) return NULL;
+    int cmp = compare(root->data, id);
+    if (cmp == 0) {
+        return root->data;
+    } else if (cmp > 0) {
+        return avl_search(root->left, id, compare);
+    } else {
+        return avl_search(root->right, id, compare);
+    }
+}
+
+// In-order traversal to generate a file
+void avl_inorder(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*)) {
+    if (root == NULL) return;
+    avl_inorder(root->left, file, print_data);
+    print_data(root->data, file);
+    avl_inorder(root->right, file, print_data);
+}
+
+// Generic memory release for AVL tree
+void avl_free(AVLNode *root, void (*free_data)(void*)) {
+    if (root == NULL) return;
+    avl_free(root->left, free_data);
+    avl_free(root->right, free_data);
+    free_data(root->data);
+    free(root);
+}
+
+// Comparison functions for factories
+int compare_usines(const void *a, const void *b) {
+    Usine *ua = (Usine*)a;
+    Usine *ub = (Usine*)b;
+    return strcmp(ub->id, ua->id); // Sort by reverse alphabetical order
+}
+
+int search_usine(const void *a, const char *id) {
+    Usine *u = (Usine*)a;
+    return strcmp(u->id, id);
+}
