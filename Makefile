@@ -17,7 +17,7 @@ $(TARGET): $(OBJS)
 	rm -rf $(OBJS)
 
 %.o: $(SRCDIR)/%.c
-	%(CC)  $(FLAGS) -c $< -o $@ -I$(INCDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -I$(INCDIR)
 
 clean:
 	rm -f $(OBJS)

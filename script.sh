@@ -1,156 +1,240 @@
 #!/bin/bash
 
+# ===== Timer and Temporary Files Setup =====
 START_TIME=$(date +%s%3N)
-
-C_EXECUTABLE="./C-Wild"
-
-# Fichier temporaire pour capturer la sortie de /usr/bin/time (qui est sur stderr)
-# Déplacé ici pour être accessible globalement.
+C_EXECUTABLE="./C-WildWater" 
 TIME_OUTPUT_FILE=$(mktemp)
+CSV_FILE=$(mktemp --suffix=.csv)
 
-# Affiche la durée totale en millisecondes
+# ===== Helper Functions =====
 function display_time {
-    # Vérifie si START_TIME est défini (devrait l'être)
     if [ ! -z "$START_TIME" ]; then
         END_TIME=$(date +%s%3N)
         DURATION=$((END_TIME - START_TIME))
-        
-        echo "Temps d'exécution total: ${DURATION} ms" [cite: 199, 200]
+        echo "Total execution time: ${DURATION} ms"
     fi
     rm -f "$TIME_OUTPUT_FILE"
+    rm -f "$CSV_FILE"
 }
 
-# Fonction pour gérer les erreurs, afficher le temps et quitter
-
 function error_exit {
-    echo "ERREUR: $1" >&2 
-    # Le 'trap' appelle display_time
+    echo "ERROR: $1" >&2
     exit 1
 }
 
-
 trap display_time EXIT
 
+function check_dependency {
+    local dep="$1"
+    if ! command -v "$dep" >/dev/null 2>&1; then
+        error_exit "Dependency '$dep' not found. Please install it."
+    fi
+}
+
+# ===== Dependency Check and Compilation =====
+check_dependency gnuplot
 
 cat << "EOF"
-   ___  __      ___ _    ___      __    _           
-  / __|_\ \    / (_) |__| \ \    / /_ _| |_ ___ _ _ 
- | (_|___\ \/\/ /| | / _` |\ \/\/ / _` |  _/ -_) '_|
-  \___|   \_/\_/ |_|_\__,_| \_/\_/\__,_|\__\___|_|  
-                                                    
+   ___  __      ___ _    ___      __    _           
+  / __|_\ \    / (_) |__| \ \    / /_ _| |_ ___ _ _ 
+ | (_|___\ \/\/ /| | / _` |\ \/\/ / _` |  _/ -_) '_|
+  \___|   \_/\_/ |_|_\__,_| \_/\_/\__,_|\__\___|_|  
+                                                    
 EOF
 
-echo "Bienvenue sur C-WildWater!"
-
+echo "Welcome to C-WildWater!"
 echo "---"
-
-echo "Vérification et compilation du programme C..."
-make [cite: 222]
-
+echo "Checking and compiling C program..."
+make
 if [ $? -ne 0 ]; then
-    error_exit "La compilation du programme C a échoué. Vérifiez votre Makefile." 
+    error_exit "C program compilation failed. Check your Makefile."
 fi
-echo "Compilation réussie. Exécutable: $C_EXECUTABLE"
+echo "Compilation successful. Executable: $C_EXECUTABLE"
 
-
-
+# ===== Argument Validation =====
 DATA_FILE=$1
 COMMAND=$2
 ARG3=$3
 ARG4=$4
 
 if [ -z "$DATA_FILE" ] || [ -z "$COMMAND" ]; then
-    error_exit "Arguments incomplets. Utilisation: myScript.sh <fichier_csv> <commande> [args...]"
+    error_exit "Incomplete arguments. Usage: myScript.sh <csv_file> <command> [args...]"
 fi
 
-# Vérification des arguments supplémentaires (sauf pour histo où on le fait plus tard)
+if [ ! -f "$DATA_FILE" ]; then
+    error_exit "Data file '$DATA_FILE' not found."
+fi
+
 if [ "$COMMAND" != "histo" ] && [ ! -z "$ARG4" ]; then
-    error_exit "Argument(s) supplémentaire(s) inattendu(s) après '$ARG3'." [cite: 194]
+    error_exit "Unexpected additional argument(s) after '$ARG3'."
 fi
 
 echo "---"
 
+# ===== CSV Conversion =====
+echo "Converting data file to CSV format..."
+echo "Factory_ID;Upstream_ID;Downstream_ID;Volume;Loss_Percentage" > "$CSV_FILE"
+cat "$DATA_FILE" >> "$CSV_FILE"
+if [ $? -ne 0 ]; then
+    error_exit "Failed to convert data file to CSV format."
+fi
+echo "CSV conversion completed. Using temporary CSV file: $CSV_FILE"
+echo "---"
 
+# ===== Command Processing =====
 case "$COMMAND" in
     "histo")
-        
         HISTO_TYPE=$ARG3
         
-        # vérification of histo argument 
         if [ -z "$HISTO_TYPE" ]; then
-            error_exit "Type d'histogramme (max, src, real) manquant pour la commande 'histo'."
+            error_exit "Histogram type (max, src, real) missing for 'histo' command."
         fi
         
-        # Bonus work to complete
         if [ "$HISTO_TYPE" != "max" ] && [ "$HISTO_TYPE" != "src" ] && [ "$HISTO_TYPE" != "real" ] && [ "$HISTO_TYPE" != "all" ]; then
-            error_exit "Type d'histogramme '$HISTO_TYPE' non valide. Doit être 'max', 'src', 'real' (ou 'all' pour le bonus)."
+            error_exit "Histogram type '$HISTO_TYPE' not valid. Must be 'max', 'src', 'real' (or 'all' for bonus)."
         fi
         
-        # verification of ARG4 
         if [ ! -z "$ARG4" ]; then
-            error_exit "Argument(s) supplémentaire(s) inattendu(s) pour la commande 'histo'." [cite: 194]
+            error_exit "Unexpected additional argument(s) for 'histo' command."
         fi
 
-        echo "Traitement 📊: Génération d'histogramme pour le type '$HISTO_TYPE'."
+        echo "Processing 📊: Generating histogram for type '$HISTO_TYPE'."
 
-        # Appel au programme C AVEC mesure du temps et de la mémoire
-        # %M: Maximum resident set size (KiloOctets)
-        /usr/bin/time -f "%M" -o "$TIME_OUTPUT_FILE" $C_EXECUTABLE histo "$DATA_FILE" "$HISTO_TYPE"
-        
+        case "$HISTO_TYPE" in
+            "max")
+                OUTPUT_FILE="histo_max_volume.csv"
+                ;;
+            "src")
+                OUTPUT_FILE="histo_source_volume.csv"
+                ;;
+            "real")
+                OUTPUT_FILE="histo_real_volume.csv"
+                ;;
+            "all")
+                OUTPUT_FILE="histo_all_volumes.csv"
+                ;;
+        esac
+        echo "Data file will be named: $OUTPUT_FILE"
+
+        /usr/bin/time -f "%M" -o "$TIME_OUTPUT_FILE" $C_EXECUTABLE histo "$CSV_FILE" "$HISTO_TYPE" "$OUTPUT_FILE"
         C_RETURN_CODE=$?
-        
-        # Récupération et affichage de la mémoire max
+
         MAX_MEMORY_KB=$(cat "$TIME_OUTPUT_FILE")
-        echo "Mémoire maximale utilisée par le C (Max RSS): ${MAX_MEMORY_KB} KB" [cite: 273]
+        echo "Maximum memory used by C (Max RSS): ${MAX_MEMORY_KB} KB"
 
         if [ $C_RETURN_CODE -ne 0 ]; then
-            error_exit "Le programme C a retourné une erreur ($C_RETURN_CODE) lors du traitement 'histo'." [cite: 198]
+            error_exit "C program returned an error ($C_RETURN_CODE) during 'histo' processing."
         fi
 
-        echo "Fichier de données CSV généré avec succès. Lancement de GnuPlot..." [cite: 155, 161]
+        echo "CSV data file generated successfully ($OUTPUT_FILE)."
 
-        # TrucGnuplot 
-        
+        # ===== GnuPlot Image Generation =====
+        echo "Launching GnuPlot to generate PNG images (50 small and 10 large factories)..."
 
-        echo "Génération des images d'histogramme terminée."
+        OUTPUT_PNG_LARGEST="${OUTPUT_FILE%.*}.largest.png"
+        OUTPUT_PNG_SMALLEST="${OUTPUT_FILE%.*}.smallest.png"
+
+        SORTED_DATA=$(tail -n +2 "$OUTPUT_FILE" | sort -t ';' -k 3,3 -n -r)
+
+        if [ $? -ne 0 ]; then
+            error_exit "Failed to sort data for GnuPlot."
+        fi
+        if [ -z "$SORTED_DATA" ]; then
+            error_exit "The C output data file is empty or contains too little data for sorting."
+        fi
+
+        TOTAL_FACTORIES=$(echo "$SORTED_DATA" | wc -l)
+        echo "Total factories found: $TOTAL_FACTORIES"
+
+        LARGEST_10=$(echo "$SORTED_DATA" | head -n 10)
+
+        if [ $(echo "$LARGEST_10" | wc -l) -lt 10 ]; then
+            echo "Warning: Less than 10 factories available. Generating plot with available data."
+        fi
+
+        echo "Generating image for the 10 largest factories: $OUTPUT_PNG_LARGEST"
+
+        gnuplot << "EOF"
+    set terminal png size 1200, 800
+    set output "$OUTPUT_PNG_LARGEST"
+    set title "10 Largest Factories (Based on Maximum Capacity)"
+    set ylabel "Volume (M.m³)"
+    set style data histogram
+    set style histogram gap 1
+    set style fill solid border -1
+    set boxwidth 0.9
+    set xtics rotate by -45
+    set xtics font ",8"
+    set auto x
+    plot '-' using 2:xtic(1) title "$HISTO_TYPE Volume" linecolor rgb "blue" 
+$LARGEST_10
+e
+EOF
+
+        if [ $? -ne 0 ]; then
+            error_exit "GnuPlot failed to generate image for largest factories."
+        fi
+
+        SMALLEST_50=$(echo "$SORTED_DATA" | tail -n 50)
+
+        if [ $(echo "$SMALLEST_50" | wc -l) -lt 50 ]; then
+            echo "Warning: Less than 50 factories available. Generating plot with available data."
+        fi
+
+        echo "Generating image for the 50 smallest factories: $OUTPUT_PNG_SMALLEST"
+
+        gnuplot << "EOF"
+    set terminal png size 1600, 900
+    set output "$OUTPUT_PNG_SMALLEST"
+    set title "50 Smallest Factories (Based on Maximum Capacity)"
+    set ylabel "Volume (M.m³)"
+    set style data histogram
+    set style histogram gap 1
+    set style fill solid border -1
+    set boxwidth 0.9
+    set xtics rotate by -45
+    set xtics font ",6"
+    set auto x
+    plot '-' using 2:xtic(1) title "$HISTO_TYPE Volume" linecolor rgb "blue"
+$SMALLEST_50
+e
+EOF
+
+        if [ $? -ne 0 ]; then
+            error_exit "GnuPlot failed to generate image for smallest factories."
+        fi
+
+        echo "Histogram image generation completed."
         ;;
 
     "leaks")
-        
         FACTORY_ID=$ARG3
         
-        
         if [ -z "$FACTORY_ID" ]; then
-            error_exit "Identifiant d'usine manquant pour la commande 'leaks'." [cite: 192]
+            error_exit "Factory identifier missing for 'leaks' command."
         fi
-        
         
         if [ ! -z "$ARG4" ]; then
-            error_exit "Argument(s) supplémentaire(s) inattendu(s) pour la commande 'leaks'." [cite: 194]
+            error_exit "Unexpected additional argument(s) for 'leaks' command."
         fi
 
-        echo "Traitement 💧: Calcul des fuites pour l'usine '$FACTORY_ID'."
-        
-        
-        # %M: Maximum resident set size (KiloOctets)
-        /usr/bin/time -f "%M" -o "$TIME_OUTPUT_FILE" $C_EXECUTABLE leaks "$DATA_FILE" "$FACTORY_ID"
-        
+        echo "Processing : Calculating leaks for factory '$FACTORY_ID'."
+
+        /usr/bin/time -f "%M" -o "$TIME_OUTPUT_FILE" $C_EXECUTABLE leaks "$CSV_FILE" "$FACTORY_ID"
         C_RETURN_CODE=$?
 
-        # Récupération et affichage de la mémoire max
         MAX_MEMORY_KB=$(cat "$TIME_OUTPUT_FILE")
-        echo "Mémoire maximale utilisée par le C (Max RSS): ${MAX_MEMORY_KB} KB" [cite: 273]
+        echo "Maximum memory used by C (Max RSS): ${MAX_MEMORY_KB} KB"
 
         if [ $C_RETURN_CODE -ne 0 ]; then
-            error_exit "Le programme C a retourné une erreur ($C_RETURN_CODE) lors du traitement 'leaks'." [cite: 198]
+            error_exit "C program returned an error ($C_RETURN_CODE) during 'leaks' processing."
         fi
-        
-        echo "Calcul des fuites et mise à jour du fichier historique de rendement terminée." [cite: 169]
+
+        echo "Leak calculation and performance history file update completed."
         ;;
 
     *)
-        # principal command not recognised
-        error_exit "Commande '$COMMAND' non reconnue. Doit être 'histo' ou 'leaks'."
+        error_exit "Command '$COMMAND' not recognized. Must be 'histo' or 'leaks'."
         ;;
 esac
 
