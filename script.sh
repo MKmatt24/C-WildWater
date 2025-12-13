@@ -40,6 +40,18 @@ trap display_time EXIT
 # PART 2: INITIAL DISPLAY AND COMPILATION CHECK
 # ==========================================================
 
+# check for dependecy existence
+function check_dependency {
+    local dep="$1"
+    if ! command -v "$dep" >/dev/null 2>&1; then
+        error_exit "Dependency '$dep' not found. Please install it."
+    fi
+}
+
+
+check_dependency gnuplot
+
+
 cat << "EOF"
    ___  __      ___ _    ___      __    _           
   / __|_\ \    / (_) |__| \ \    / /_ _| |_ ___ _ _ 
