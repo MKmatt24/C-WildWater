@@ -1,47 +1,47 @@
 #ifndef AVL_H
 #define AVL_H
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
-// Generic structure for an AVL node
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+typedef struct Factory {
+    char *id;
+    double max_volume;
+    double source_volume;
+    double real_volume;
+} Factory;
+
+typedef struct NetworkNode {
+    char *id;
+    struct NetworkNode *parent;
+} NetworkNode;
+
 typedef struct AVLNode {
-    void *data;                     // Pointer to data (Factory or Node)
+    void *data;
     struct AVLNode *left;
     struct AVLNode *right;
     int height;
 } AVLNode;
 
-// Structure for a factory
-typedef struct Usine {
-    char *id;
-    double max_volume;      // Maximum processing capacity (in thousands of m³/year)
-    double source_volume;   // Total volume captured by sources (in thousands of m³/year)
-    double real_volume;     // Actual processed volume (in thousands of m³/year)
-} Usine;
-
-// Structure for a network node
-typedef struct Noeud {
-    char *id;
-    // Other fields depending on the node type (source, storage, junction, etc.)
-} Noeud;
-
-// Functions for the generic AVL
+// Prototypes des fonctions
 AVLNode* avl_create_node(void *data);
 AVLNode* avl_insert(AVLNode *root, void *data, int (*compare)(const void*, const void*));
 void* avl_search(AVLNode *root, const char *id, int (*compare)(const void*, const char*));
 void avl_inorder(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*));
+void avl_inorder_reverse(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*));
 void avl_free(AVLNode *root, void (*free_data)(void*));
 
-// Comparison functions for AVL
-int compare_usines(const void *a, const void *b);
-int search_usine(const void *a, const char *id);
-int compare_noeuds(const void *a, const void *b);
-int search_noeud(const void *a, const char *id);
+// Fonctions de comparaison
+int compare_factories(const void *a, const void *b);
+int search_factory(const void *a, const char *id);
+int compare_network_nodes(const void *a, const void *b);
+int search_network_node(const void *a, const char *id);
 
-// Display and free functions for AVL
-void print_usine(void *data, FILE *file);
-void free_usine(void *data);
-void print_noeud(void *data, FILE *file);
-void free_noeud(void *data);
+// Fonctions d'affichage et de libération
+void print_factory(void *data, FILE *file);
+void free_factory(void *data);
+void print_network_node(void *data, FILE *file);
+void free_network_node(void *data);
+
 #endif
