@@ -1,6 +1,6 @@
 #include "avl.h"
 
-// Create a new generic AVL node
+// Node creation
 AVLNode* avl_create_node(void *data) {
     AVLNode *node = (AVLNode*)malloc(sizeof(AVLNode));
     node->data = data;
@@ -9,18 +9,18 @@ AVLNode* avl_create_node(void *data) {
     return node;
 }
 
-// Get the height of a node
+// Size of an AVL 
 int avl_height(AVLNode *node) {
     if (node == NULL) return 0;
     return node->height;
 }
 
-// Get the maximum of two integers
+// Maximum of two integers
 int avl_max(int a, int b) {
     return (a > b) ? a : b;
 }
 
-// Perform a right rotation
+// Right rotation
 AVLNode* avl_rotate_right(AVLNode *y) {
     AVLNode *x = y->left;
     AVLNode *T2 = x->right;
@@ -31,7 +31,7 @@ AVLNode* avl_rotate_right(AVLNode *y) {
     return x;
 }
 
-// Perform a left rotation
+// Right rotation
 AVLNode* avl_rotate_left(AVLNode *x) {
     AVLNode *y = x->right;
     AVLNode *T2 = y->left;
@@ -42,50 +42,38 @@ AVLNode* avl_rotate_left(AVLNode *x) {
     return y;
 }
 
-// Get the balance factor of a node
+// Get balance factor
 int avl_get_balance(AVLNode *node) {
     if (node == NULL) return 0;
     return avl_height(node->left) - avl_height(node->right);
 }
 
-// Generic insertion in AVL tree
+// Insert a node
 AVLNode* avl_insert(AVLNode *root, void *data, int (*compare)(const void*, const void*)) {
-    if (root == NULL) {
-        return avl_create_node(data);
-    }
+    if (root == NULL) return avl_create_node(data);
+
     int cmp = compare(data, root->data);
-    if (cmp > 0) { // Sort by reverse alphabetical order for factories
+    if (cmp > 0) {
         root->left = avl_insert(root->left, data, compare);
     } else if (cmp < 0) {
         root->right = avl_insert(root->right, data, compare);
     } else {
-        // Update data if the node already exists
-        if (compare == compare_usines) {
-            Usine *existing = (Usine*)root->data;
-            Usine *new = (Usine*)data;
-            existing->max_volume = new->max_volume;
-            existing->source_volume = new->source_volume;
-            existing->real_volume = new->real_volume;
-        }
-        free(data);
         return root;
     }
+
     root->height = 1 + avl_max(avl_height(root->left), avl_height(root->right));
     int balance = avl_get_balance(root);
-    // Left Left case
+
     if (balance > 1 && compare(data, root->left->data) > 0) {
         return avl_rotate_right(root);
     }
-    // Right Right case
     if (balance < -1 && compare(data, root->right->data) < 0) {
         return avl_rotate_left(root);
     }
-    // Left Right case
     if (balance > 1 && compare(data, root->left->data) < 0) {
         root->left = avl_rotate_left(root->left);
         return avl_rotate_right(root);
     }
-    // Right Left case
     if (balance < -1 && compare(data, root->right->data) > 0) {
         root->right = avl_rotate_right(root->right);
         return avl_rotate_left(root);
@@ -93,9 +81,10 @@ AVLNode* avl_insert(AVLNode *root, void *data, int (*compare)(const void*, const
     return root;
 }
 
-// Generic search in AVL tree
+// Search a node by id
 void* avl_search(AVLNode *root, const char *id, int (*compare)(const void*, const char*)) {
     if (root == NULL) return NULL;
+
     int cmp = compare(root->data, id);
     if (cmp == 0) {
         return root->data;
@@ -106,7 +95,7 @@ void* avl_search(AVLNode *root, const char *id, int (*compare)(const void*, cons
     }
 }
 
-// In-order traversal to generate a file
+// Inorder traversal
 void avl_inorder(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*)) {
     if (root == NULL) return;
     avl_inorder(root->left, file, print_data);
@@ -114,7 +103,15 @@ void avl_inorder(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*)) {
     avl_inorder(root->right, file, print_data);
 }
 
-// Generic memory release for AVL tree
+// Reverse inorder traversal
+void avl_inorder_reverse(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*)) {
+    if (root == NULL) return;
+    avl_inorder_reverse(root->right, file, print_data);
+    print_data(root->data, file);
+    avl_inorder_reverse(root->left, file, print_data);
+}
+
+// Free the AVL tree
 void avl_free(AVLNode *root, void (*free_data)(void*)) {
     if (root == NULL) return;
     avl_free(root->left, free_data);
@@ -123,53 +120,54 @@ void avl_free(AVLNode *root, void (*free_data)(void*)) {
     free(root);
 }
 
-// Comparison functions for factories
-int compare_usines(const void *a, const void *b) {
-    Usine *ua = (Usine*)a;
-    Usine *ub = (Usine*)b;
-    return strcmp(ub->id, ua->id); // Sort by reverse alphabetical order
+// Compare factories
+int compare_factories(const void *a, const void *b) {
+    Factory *fa = (Factory*)a;
+    Factory *fb = (Factory*)b;
+    return strcmp(fa->id, fb->id);
 }
 
-int search_usine(const void *a, const char *id) {
-    Usine *u = (Usine*)a;
-    return strcmp(u->id, id);
+// Search factory by id
+int search_factory(const void *a, const char *id) {
+    Factory *f = (Factory*)a;
+    return strcmp(f->id, id);
 }
 
-// Comparison functions for nodes
-int compare_noeuds(const void *a, const void *b) {
-    Noeud *na = (Noeud*)a;
-    Noeud *nb = (Noeud*)b;
+// Compare network nodes
+int compare_network_nodes(const void *a, const void *b) {
+    NetworkNode *na = (NetworkNode*)a;
+    NetworkNode *nb = (NetworkNode*)b;
     return strcmp(na->id, nb->id);
 }
 
-int search_noeud(const void *a, const char *id) {
-    Noeud *n = (Noeud*)a;
+// Search network node by id
+int search_network_node(const void *a, const char *id) {
+    NetworkNode *n = (NetworkNode*)a;
     return strcmp(n->id, id);
 }
 
-// Print functions for factories
-void print_usine(void *data, FILE *file) {
-    Usine *u = (Usine*)data;
-    fprintf(file, "%s;%.3f;%.3f;%.3f\n", u->id, u->max_volume, u->source_volume, u->real_volume);
+// Display and release functions
+void print_factory(void *data, FILE *file) {
+    Factory *f = (Factory*)data;
+    fprintf(file, "%s;%.3f;%.3f;%.3f\n", f->id, f->max_volume / 1000.0, f->source_volume / 1000.0, f->real_volume / 1000.0);
 }
 
-// Free functions for factories
-void free_usine(void *data) {
-    Usine *u = (Usine*)data;
-    free(u->id);
-    free(u);
+// Free factory
+void free_factory(void *data) {
+    Factory *f = (Factory*)data;
+    free(f->id);
+    free(f);
 }
 
-// Print functions for nodes
-void print_noeud(void *data, FILE *file) {
-    Noeud *n = (Noeud*)data;
+// Print network node
+void print_network_node(void *data, FILE *file) {
+    NetworkNode *n = (NetworkNode*)data;
     fprintf(file, "%s\n", n->id);
 }
 
-// Free functions for nodes
-void free_noeud(void *data) {
-    Noeud *n = (Noeud*)data;
+// Free network node
+void free_network_node(void *data) {
+    NetworkNode *n = (NetworkNode*)data;
     free(n->id);
     free(n);
 }
-
