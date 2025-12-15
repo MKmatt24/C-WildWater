@@ -68,7 +68,7 @@ fi
 if [ "$COMMAND" != "histo" ] && [ ! -z "$ARG4" ]; then
     error_exit "Unexpected additional argument(s) after '$ARG3'."
 fi
-
+#ceci est un commentaire    
 echo "---"
 
 # ===== CSV Conversion =====
