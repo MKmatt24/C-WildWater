@@ -1,21 +1,37 @@
 #ifndef AVL_H
 #define AVL_H
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
+
+/* Network structures */
+
+struct NetworkNode;
+
+typedef struct NetworkNodeList {
+    struct NetworkNode *node;
+    struct NetworkNodeList *next;
+} NetworkNodeList;
+
+typedef struct NetworkNode {
+    char *id;
+    double leak_percent;
+    struct NetworkNode *parent;
+    NetworkNodeList *children;
+} NetworkNode;
+
+/* Factory structure */
 
 typedef struct Factory {
     char *id;
     double max_volume;
     double source_volume;
     double real_volume;
+    NetworkNode *network_root;
+    struct AVLNode *network_index;
 } Factory;
 
-typedef struct NetworkNode {
-    char *id;
-    struct NetworkNode *parent;
-} NetworkNode;
+/* AVL structure */
 
 typedef struct AVLNode {
     void *data;
@@ -24,24 +40,34 @@ typedef struct AVLNode {
     int height;
 } AVLNode;
 
-// Prototypes of functions
-AVLNode* avl_create_node(void *data);
-AVLNode* avl_insert(AVLNode *root, void *data, int (*compare)(const void*, const void*));
-void* avl_search(AVLNode *root, const char *id, int (*compare)(const void*, const char*));
-void avl_inorder(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*));
-void avl_inorder_reverse(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*));
-void avl_free(AVLNode *root, void (*free_data)(void*));
+/* AVL API */
 
-// Comparaison functions
+AVLNode *avl_create_node(void *data);
+AVLNode *avl_insert(AVLNode *root, void *data, int (*compare)(const void *, const void *));
+void *avl_search(AVLNode *root, const void *key, int (*compare)(const void *, const void *));
+void avl_inorder(AVLNode *root, FILE *out, void (*print_data)(void *, FILE *));
+void avl_inorder_reverse(AVLNode *root, FILE *out, void (*print_data)(void *, FILE *));
+void avl_free(AVLNode *root, void (*free_data)(void *));
+
+/* Factory helpers */
+
+Factory *avl_insert_factory(AVLNode **factory_avl, Factory *factory);
 int compare_factories(const void *a, const void *b);
-int search_factory(const void *a, const char *id);
-int compare_network_nodes(const void *a, const void *b);
-int search_network_node(const void *a, const char *id);
-
-// Dipslay and release functions
-void print_factory(void *data, FILE *file);
+int compare_factory_id(const void *key, const void *data);
 void free_factory(void *data);
-void print_network_node(void *data, FILE *file);
-void free_network_node(void *data);
+
+
+/* Network helpers */
+
+NetworkNode *create_network_node(const char *id, double leak_percent);
+NetworkNode *avl_insert_network_node(Factory *factory, NetworkNode *node);
+int compare_network_nodes(const void *a, const void *b);
+int compare_network_node_id(const void *key, const void *data);
+void free_network_tree(NetworkNode *root);
+
+
+
+
+
 
 #endif
