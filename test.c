@@ -24,14 +24,14 @@ typedef struct AVLNode {
     int height;
 } AVLNode;
 
+// Vérifie s'il s'agit d'une ligne décrivant une usine
 bool check_factory_line(char** cols) {
     return (strcmp(cols[0], "-") == 0 && 
             strcmp(cols[2], "-") == 0 && 
             strcmp(cols[3], "-") != 0);
 }
 
-// Vérifie s'il s'agit d'une ligne de captage SOURCE -> USINE [cite: 69-77]
-// Format : - ; ID_SOURCE ; ID_USINE ; VOLUME ; FUITE
+// Vérifie s'il s'agit d'une ligne de captage SOURCE -> USINE
 bool check_source_line(char** cols) {
     return (strcmp(cols[0], "-") == 0 && 
             strcmp(cols[2], "-") != 0 && 
@@ -41,13 +41,14 @@ bool check_source_line(char** cols) {
 // Node creation
 AVLNode* avl_create_node(void *data) {
     AVLNode *node = (AVLNode*)malloc(sizeof(AVLNode));
+    if (!node) return NULL;
     node->data = data;
     node->left = node->right = NULL;
     node->height = 1;
     return node;
 }
 
-// Size of an AVL 
+// Height of an AVL node
 int avl_height(AVLNode *node) {
     if (node == NULL) return 0;
     return node->height;
@@ -69,7 +70,7 @@ AVLNode* avl_rotate_right(AVLNode *y) {
     return x;
 }
 
-// Right rotation
+// Left rotation
 AVLNode* avl_rotate_left(AVLNode *x) {
     AVLNode *y = x->right;
     AVLNode *T2 = y->left;
@@ -133,16 +134,6 @@ void* avl_search(AVLNode *root, const char *id, int (*compare)(const void*, cons
     }
 }
 
-// Inorder traversal
-void avl_inorder(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*)) {
-    if (root == NULL) {
-        return;
-    } 
-    avl_inorder(root->left, file, print_data);
-    print_data(root->data, file);
-    avl_inorder(root->right, file, print_data);
-}
-
 // Reverse inorder traversal
 void avl_inorder_reverse(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*)) {
     if (root == NULL) {
@@ -175,25 +166,6 @@ int search_factory(const void *a, const char *id) {
     return strcmp(f->id, id);
 }
 
-// Compare network nodes
-int compare_network_nodes(const void *a, const void *b) {
-    NetworkNode *na = (NetworkNode*)a;
-    NetworkNode *nb = (NetworkNode*)b;
-    return strcmp(na->id, nb->id);
-}
-
-// Search network node by id
-int search_network_node(const void *a, const char *id) {
-    NetworkNode *n = (NetworkNode*)a;
-    return strcmp(n->id, id);
-}
-
-// Display and release functions
-void print_factory(void *data, FILE *file) {
-    Factory *f = (Factory*)data;
-    fprintf(file, "%s;%.3f;%.3f;%.3f\n", f->id, f->max_volume / 1000.0, f->source_volume / 1000.0, f->real_volume / 1000.0);
-}
-
 // Free factory
 void free_factory(void *data) {
     Factory *f = (Factory*)data;
@@ -201,61 +173,40 @@ void free_factory(void *data) {
     free(f);
 }
 
-// Print network node
-void print_network_node(void *data, FILE *file) {
-    NetworkNode *n = (NetworkNode*)data;
-    fprintf(file, "%s\n", n->id);
-}
-
-// Free network node
-void free_network_node(void *data) {
-    NetworkNode *n = (NetworkNode*)data;
-    free(n->id);
-    free(n);
-}
-
-
-
-// Affichage pour l'argument 'max' [cite: 179]
+// Affichage pour l'argument 'max'
 void print_factory_max(void *data, FILE *file) {
     Factory *f = (Factory*)data;
-    // Conversion : données initiales en k.m3 -> division par 1000 pour M.m3
     fprintf(file, "%s;%.3f\n", f->id, f->max_volume / 1000.0);
 }
 
-// Affichage pour l'argument 'src' [cite: 179]
+// Affichage pour l'argument 'src'
 void print_factory_src(void *data, FILE *file) {
     Factory *f = (Factory*)data;
     fprintf(file, "%s;%.3f\n", f->id, f->source_volume / 1000.0);
 }
 
-// Affichage pour l'argument 'real' [cite: 180]
+// Affichage pour l'argument 'real'
 void print_factory_real(void *data, FILE *file) {
     Factory *f = (Factory*)data;
     fprintf(file, "%s;%.3f\n", f->id, f->real_volume / 1000.0);
 }
 
-
-
-
-
-
 AVLNode *build_avl(const char *filename) {
     FILE* f = fopen(filename, "r");
     if (!f) {
-        printf("Error the file do not open \n");
-        exit(1); // Code retour strictement positif en cas d'erreur [cite: 213]
+        fprintf(stderr, "Error: cannot open file %s\n", filename);
+        return NULL;
     }
 
     AVLNode* root = NULL;
-    char line[MAX_LINE]; // Taille adaptée pour traiter les lignes du fichier de 500Mo [cite: 56]
+    char line[MAX_LINE];
 
     while (fgets(line, sizeof(line), f)) {
         char* cols[5];
         char* tmp = strtok(line, ";\n");
         int i = 0;
 
-        // Découpage en 5 colonnes selon le format CSV spécifié [cite: 59]
+        // Découpage en 5 colonnes
         while (tmp && i < 5) {
             cols[i++] = tmp;
             tmp = strtok(NULL, ";\n");
@@ -264,63 +215,78 @@ AVLNode *build_avl(const char *filename) {
         if (i < 4) {
             continue; // Ligne incomplète
         }        
+        
         Factory* p = NULL;
 
-        // CAS 1 : Ligne décrivant la capacité de l'USINE [cite: 78, 86]
+        // CAS 1 : Ligne décrivant la capacité de l'USINE
         if (check_factory_line(cols)) {
-            p = avl_search(root, cols[1], search_factory);
+            p = (Factory*)avl_search(root, cols[1], search_factory);
             if (!p) {
                 p = calloc(1, sizeof(Factory));
+                if (!p) {
+                    fclose(f);
+                    avl_free(root, free_factory);
+                    return NULL;
+                }
                 p->id = strdup(cols[1]);
-                root = avl_insert(root, p, compare_factories); // L'AVL s'équilibre ici
+                if (!p->id) {
+                    free(p);
+                    fclose(f);
+                    avl_free(root, free_factory);
+                    return NULL;
+                }
+                root = avl_insert(root, p, compare_factories);
             }
-            p->max_volume = atof(cols[3]); // Unité : milliers de m3 [cite: 86]
+            p->max_volume = atof(cols[3]);
         }
 
-        // CAS 2 : Ligne de captage SOURCE -> USINE [cite: 69, 75]
+        // CAS 2 : Ligne de captage SOURCE -> USINE
         else if (check_source_line(cols)) {
-            p = avl_search(root, cols[2], search_factory);
+            p = (Factory*)avl_search(root, cols[2], search_factory);
             if (!p) {
                 p = calloc(1, sizeof(Factory));
+                if (!p) {
+                    fclose(f);
+                    avl_free(root, free_factory);
+                    return NULL;
+                }
                 p->id = strdup(cols[2]);
+                if (!p->id) {
+                    free(p);
+                    fclose(f);
+                    avl_free(root, free_factory);
+                    return NULL;
+                }
                 root = avl_insert(root, p, compare_factories);
             }
 
-            double volume_capte = atof(cols[3]); // Volume en milliers de m3 [cite: 75]
-            double fuite_ratio = atof(cols[4]) / 100.0; // Pourcentage de fuites [cite: 75]
+            double volume_capte = atof(cols[3]);
+            double fuite_ratio = atof(cols[4]) / 100.0;
 
             p->source_volume += volume_capte;
-            // Calcul du volume réellement traité après fuites [cite: 151, 152]
             p->real_volume += volume_capte * (1.0 - fuite_ratio);
         }
     }
-
 
     fclose(f);
     return root;
 }
 
-
-
-
 int main(int argc, char *argv[]) {
-    // 1. Vérification minimale : il faut au moins le fichier source et un mode
+    // Vérification minimale des arguments
     if (argc < 4) {
-        fprintf(stderr, "Usage: %s <input.csv> [modes...]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <input.csv> <mode> <output_file> [...]\n", argv[0]);
         return 1;
     }
 
-    // 2. On construit l'arbre UNE SEULE FOIS (gain de performance énorme)
-    // On suppose que argv[1] est toujours le fichier de données
+    // Construction de l'arbre AVL
     AVLNode* root = build_avl(argv[1]);
     if (!root) {
         fprintf(stderr, "Error: Failed to build AVL from %s\n", argv[1]);
         return 2;
     }
 
-    /* Logique : On parcourt tous les arguments à partir de argv[2].
-       Si on trouve un mode, le fichier de sortie est l'argument juste après.
-    */
+    // Parcours des arguments pour traiter les différents modes
     for (int i = 2; i < argc; i++) {
         
         // --- Cas MAX ---
@@ -330,8 +296,10 @@ int main(int argc, char *argv[]) {
                 fprintf(out, "identifier;max volume (M.m3)\n");
                 avl_inorder_reverse(root, out, print_factory_max);
                 fclose(out);
+            } else {
+                fprintf(stderr, "Error: cannot open output file %s\n", argv[i+1]);
             }
-            i++; // On saute le nom du fichier puisqu'on vient de l'utiliser
+            i++;
         } 
         
         // --- Cas SRC ---
@@ -341,6 +309,8 @@ int main(int argc, char *argv[]) {
                 fprintf(out, "identifier;source volume (M.m3)\n");
                 avl_inorder_reverse(root, out, print_factory_src);
                 fclose(out);
+            } else {
+                fprintf(stderr, "Error: cannot open output file %s\n", argv[i+1]);
             }
             i++;
         }
@@ -352,20 +322,15 @@ int main(int argc, char *argv[]) {
                 fprintf(out, "identifier;real volume (M.m3)\n");
                 avl_inorder_reverse(root, out, print_factory_real);
                 fclose(out);
+            } else {
+                fprintf(stderr, "Error: cannot open output file %s\n", argv[i+1]);
             }
             i++;
         }
     }
 
-    // 3. Nettoyage final de la mémoire
+    // Nettoyage final de la mémoire
     avl_free(root, free_factory);
     
     return 0;
 }
-
-
-
-
-
-
-
