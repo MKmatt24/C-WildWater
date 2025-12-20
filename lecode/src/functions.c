@@ -54,6 +54,7 @@ void print_factory_real(void *data, FILE *file) {
     }
 }
 
+
 int compare_node_lookup(const void *a, const void *b) {
     return strcmp(((NodeLookup*)a)->id, ((NodeLookup*)b)->id);
 }
@@ -188,3 +189,5 @@ AVLNode* build_avl(const char *filename) {
     
     return root;
 }
+
+
