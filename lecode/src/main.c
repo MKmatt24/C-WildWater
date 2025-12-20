@@ -165,6 +165,7 @@ int main(int argc, char *argv[]) {
             }
             i++;
         }
+        
         else {
             fprintf(stderr, "Error: Unknown argument '%s'\n", argv[i]);
             avl_free(root, free_factory);
