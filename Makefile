@@ -1,36 +1,30 @@
-# Compilateur et options
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -O2
+# Ajout de -Iinclude pour que le compilateur trouve les headers
+CFLAGS = -Wall -Wextra -std=c99 -O2 -Iinclude
 LDFLAGS = -lm
 
-# Nom de l'exécutable
 TARGET = C-WildWater
 
-# Fichiers sources et objets
-SRCS = main.c avl.c functions.c
+# Indiquer que les sources sont dans src/
+SRCS = src/main.c src/avl.c src/functions.c
+# Les objets seront créés au même endroit que les sources
 OBJS = $(SRCS:.c=.o)
-HEADERS = avl.h functions.h
 
-# Règle par défaut
 all: $(TARGET)
 
-# Compilation de l'exécutable
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
-# Compilation des fichiers objets
-%.o: %.c $(HEADERS)
+# Règle pour compiler les .o à partir des .c dans src/
+src/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Nettoyage des fichiers générés
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f src/*.o $(TARGET)
 
-# Nettoyage complet (fichiers objets + données générées)
 fclean: clean
 	rm -f *.dat *.csv *.png
 
-# Recompilation complète
 re: fclean all
 
 .PHONY: all clean fclean re
