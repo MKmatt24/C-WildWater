@@ -1,7 +1,7 @@
+#define _GNU_SOURCE
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
 #include "avl.h"
 #include "functions.h"
 
