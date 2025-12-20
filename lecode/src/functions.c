@@ -1,6 +1,7 @@
+#define _GNU_SOURCE
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include "functions.h"
 
 bool check_factory_line(char** cols, int num_cols) {
