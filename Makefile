@@ -1,24 +1,36 @@
-CC = gcc 
-CFLAGS = -Wall -Wextra
-LIBS = -lm 
-SRCDIR = src
-INCDIR = include
+# Compilateur et options
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99 -O2
+LDFLAGS = -lm
 
-SRC = $(wildcard $(SRCDIR)/*.c)
-OBJS = $(SRC:$(SRCDIR)/%.c=%.o)
+# Nom de l'exécutable
 TARGET = C-WildWater
 
-.SILENT:
+# Fichiers sources et objets
+SRCS = main.c avl.c functions.c
+OBJS = $(SRCS:.c=.o)
+HEADERS = avl.h functions.h
 
+# Règle par défaut
 all: $(TARGET)
 
+# Compilation de l'exécutable
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(LIBS)
-	rm -rf $(OBJS)
+	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
-%.o: $(SRCDIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@ -I$(INCDIR)
+# Compilation des fichiers objets
+%.o: %.c $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
 
+# Nettoyage des fichiers générés
 clean:
-	rm -f $(OBJS)
-	rm -f $(TARGET)
+	rm -f $(OBJS) $(TARGET)
+
+# Nettoyage complet (fichiers objets + données générées)
+fclean: clean
+	rm -f *.dat *.csv *.png
+
+# Recompilation complète
+re: fclean all
+
+.PHONY: all clean fclean re
