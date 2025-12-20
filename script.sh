@@ -1,241 +1,183 @@
 #!/bin/bash
 
-# ===== Timer and Temporary Files Setup =====
+export LC_NUMERIC=C
+
+##############################################
+# Timer and temp files
+##############################################
 START_TIME=$(date +%s%3N)
-C_EXECUTABLE="./C-WildWater" 
+C_EXECUTABLE="./C-WildWater"
 TIME_OUTPUT_FILE=$(mktemp)
 CSV_FILE=$(mktemp --suffix=.csv)
 
-# ===== Helper Functions =====
-function display_time {
-    if [ ! -z "$START_TIME" ]; then
-        END_TIME=$(date +%s%3N)
-        DURATION=$((END_TIME - START_TIME))
-        echo "Total execution time: ${DURATION} ms"
-    fi
-    rm -f "$TIME_OUTPUT_FILE"
-    rm -f "$CSV_FILE"
+cleanup() {
+    END_TIME=$(date +%s%3N)
+    echo "Total execution time: $((END_TIME - START_TIME)) ms"
+    rm -f "$TIME_OUTPUT_FILE" "$CSV_FILE"
 }
+trap cleanup EXIT
 
-function error_exit {
+error_exit() {
     echo "ERROR: $1" >&2
     exit 1
 }
 
-trap display_time EXIT
+##############################################
+# Dependency & compilation
+##############################################
+command -v gnuplot >/dev/null 2>&1 || error_exit "gnuplot not installed"
 
-function check_dependency {
-    local dep="$1"
-    if ! command -v "$dep" >/dev/null 2>&1; then
-        error_exit "Dependency '$dep' not found. Please install it."
-    fi
-}
-
-# ===== Dependency Check and Compilation =====
-check_dependency gnuplot
-
-cat << "EOF"
-   ___  __      ___ _    ___      __    _           
-  / __|_\ \    / (_) |__| \ \    / /_ _| |_ ___ _ _ 
- | (_|___\ \/\/ /| | / _` |\ \/\/ / _` |  _/ -_) '_|
-  \___|   \_/\_/ |_|_\__,_| \_/\_/\__,_|\__\___|_|  
-                                                    
-EOF
-
-echo "Welcome to C-WildWater!"
-echo "---"
 echo "Checking and compiling C program..."
-make
-if [ $? -ne 0 ]; then
-    error_exit "C program compilation failed. Check your Makefile."
-fi
-echo "Compilation successful. Executable: $C_EXECUTABLE"
+make || error_exit "Compilation failed"
+echo "Compilation OK → $C_EXECUTABLE"
+echo "---"
 
-# ===== Argument Validation =====
-DATA_FILE=$1
-COMMAND=$2
-ARG3=$3
-ARG4=$4
+##############################################
+# Arguments
+##############################################
+DATA_FILE="$1"
+COMMAND="$2"
+ARG3="$3"
 
 if [ -z "$DATA_FILE" ] || [ -z "$COMMAND" ]; then
-    error_exit "Incomplete arguments. Usage: myScript.sh <csv_file> <command> [args...]"
+    error_exit "Usage: ./script.sh <data.dat> <histo|leaks> <max|src|real|factory_id>"
 fi
 
-if [ ! -f "$DATA_FILE" ]; then
-    error_exit "Data file '$DATA_FILE' not found."
-fi
+[ ! -f "$DATA_FILE" ] && error_exit "Data file not found: $DATA_FILE"
 
-if [ "$COMMAND" != "histo" ] && [ ! -z "$ARG4" ]; then
-    error_exit "Unexpected additional argument(s) after '$ARG3'."
-fi
-#ceci est un commentaire    
-echo "---"
-
-# ===== CSV Conversion =====
-echo "Converting data file to CSV format..."
+##############################################
+# CSV conversion
+##############################################
+echo "Converting data file to CSV..."
 echo "Factory_ID;Upstream_ID;Downstream_ID;Volume;Loss_Percentage" > "$CSV_FILE"
 cat "$DATA_FILE" >> "$CSV_FILE"
-if [ $? -ne 0 ]; then
-    error_exit "Failed to convert data file to CSV format."
-fi
-echo "CSV conversion completed. Using temporary CSV file: $CSV_FILE"
+echo "Temporary CSV: $CSV_FILE"
 echo "---"
 
-# ===== Command Processing =====
+##############################################
+# Command processing
+##############################################
 case "$COMMAND" in
-    "histo")
-        HISTO_TYPE=$ARG3
+    histo)
+        HISTO_TYPE="$ARG3"
         
         if [ -z "$HISTO_TYPE" ]; then
-            error_exit "Histogram type (max, src, real) missing for 'histo' command."
+            error_exit "Histogram type missing. Usage: ./script.sh <data.dat> histo <max|src|real>"
         fi
         
-        if [ "$HISTO_TYPE" != "max" ] && [ "$HISTO_TYPE" != "src" ] && [ "$HISTO_TYPE" != "real" ] && [ "$HISTO_TYPE" != "all" ]; then
-            error_exit "Histogram type '$HISTO_TYPE' not valid. Must be 'max', 'src', 'real' (or 'all' for bonus)."
-        fi
-        
-        if [ ! -z "$ARG4" ]; then
-            error_exit "Unexpected additional argument(s) for 'histo' command."
-        fi
-
-        echo "Processing 📊: Generating histogram for type '$HISTO_TYPE'."
-
         case "$HISTO_TYPE" in
-            "max")
+            max)
                 OUTPUT_FILE="histo_max_volume.csv"
+                TITLE="Maximum Capacity"
                 ;;
-            "src")
+            src)
                 OUTPUT_FILE="histo_source_volume.csv"
+                TITLE="Source Volume"
                 ;;
-            "real")
+            real)
                 OUTPUT_FILE="histo_real_volume.csv"
+                TITLE="Real Treated Volume"
                 ;;
-            "all")
-                OUTPUT_FILE="histo_all_volumes.csv"
+            *)
+                error_exit "Invalid histogram type: $HISTO_TYPE (use max, src, or real)"
                 ;;
         esac
-        echo "Data file will be named: $OUTPUT_FILE"
 
-        /usr/bin/time -f "%M" -o "$TIME_OUTPUT_FILE" $C_EXECUTABLE histo "$CSV_FILE" "$HISTO_TYPE" "$OUTPUT_FILE"
-        C_RETURN_CODE=$?
+        echo "Generating histogram data ($HISTO_TYPE)..."
+        
+        /usr/bin/time -f "%M" -o "$TIME_OUTPUT_FILE" \
+            $C_EXECUTABLE "$CSV_FILE" "$HISTO_TYPE" "$OUTPUT_FILE" \
+            || error_exit "C program failed"
 
-        MAX_MEMORY_KB=$(cat "$TIME_OUTPUT_FILE")
-        echo "Maximum memory used by C (Max RSS): ${MAX_MEMORY_KB} KB"
+        echo "Max memory used by C: $(cat "$TIME_OUTPUT_FILE") KB"
+        echo "CSV generated: $OUTPUT_FILE"
+        echo "---"
 
-        if [ $C_RETURN_CODE -ne 0 ]; then
-            error_exit "C program returned an error ($C_RETURN_CODE) during 'histo' processing."
-        fi
-
-        echo "CSV data file generated successfully ($OUTPUT_FILE)."
-
-        # ===== GnuPlot Image Generation =====
-        echo "Launching GnuPlot to generate PNG images (50 small and 10 large factories)..."
-
-        OUTPUT_PNG_LARGEST="${OUTPUT_FILE%.*}.largest.png"
-        OUTPUT_PNG_SMALLEST="${OUTPUT_FILE%.*}.smallest.png"
-
-        SORTED_DATA=$(tail -n +2 "$OUTPUT_FILE" | sort -t ';' -k 3,3 -n -r)
-
-        if [ $? -ne 0 ]; then
-            error_exit "Failed to sort data for GnuPlot."
-        fi
-        if [ -z "$SORTED_DATA" ]; then
-            error_exit "The C output data file is empty or contains too little data for sorting."
-        fi
+        # Sort data
+        SORTED_DATA=$(tail -n +2 "$OUTPUT_FILE" | sort -t ';' -k 2,2 -g -r)
+        
+        [ -z "$SORTED_DATA" ] && error_exit "No data available for plotting"
 
         TOTAL_FACTORIES=$(echo "$SORTED_DATA" | wc -l)
-        echo "Total factories found: $TOTAL_FACTORIES"
+        echo "Total factories: $TOTAL_FACTORIES"
 
         LARGEST_10=$(echo "$SORTED_DATA" | head -n 10)
+        SMALLEST_50=$(echo "$SORTED_DATA" | tail -n 50)
 
-        if [ $(echo "$LARGEST_10" | wc -l) -lt 10 ]; then
-            echo "Warning: Less than 10 factories available. Generating plot with available data."
-        fi
+        # Gnuplot — largest
+        OUT_LARGEST="${OUTPUT_FILE%.*}_largest.png"
+        echo "Generating $OUT_LARGEST"
 
-        echo "Generating image for the 10 largest factories: $OUTPUT_PNG_LARGEST"
-
-        gnuplot << "EOF"
-    set terminal png size 1200, 800
-    set output "$OUTPUT_PNG_LARGEST"
-    set title "10 Largest Factories (Based on Maximum Capacity)"
-    set ylabel "Volume (M.m³)"
-    set style data histogram
-    set style histogram gap 1
-    set style fill solid border -1
-    set boxwidth 0.9
-    set xtics rotate by -45
-    set xtics font ",8"
-    set auto x
-    plot '-' using 2:xtic(1) title "$HISTO_TYPE Volume" linecolor rgb "blue" 
+        gnuplot <<EOF
+set datafile separator ";"
+set datafile commentschars ""
+set terminal png size 1200,800
+set output "$OUT_LARGEST"
+set title "10 Largest Factories ($TITLE)"
+set ylabel "Volume (k.m3.year-1)"
+set xlabel "Factory ID"
+set style data histogram
+set style histogram gap 1
+set style fill solid border -1
+set boxwidth 0.9
+set xtics rotate by -45 font ",8"
+set grid ytics
+plot '-' using 2:xtic(1) title "$TITLE" lc rgb "red"
 $LARGEST_10
 e
 EOF
 
-        if [ $? -ne 0 ]; then
-            error_exit "GnuPlot failed to generate image for largest factories."
-        fi
+        # Gnuplot — smallest
+        OUT_SMALLEST="${OUTPUT_FILE%.*}_smallest.png"
+        echo "Generating $OUT_SMALLEST"
 
-        SMALLEST_50=$(echo "$SORTED_DATA" | tail -n 50)
-
-        if [ $(echo "$SMALLEST_50" | wc -l) -lt 50 ]; then
-            echo "Warning: Less than 50 factories available. Generating plot with available data."
-        fi
-
-        echo "Generating image for the 50 smallest factories: $OUTPUT_PNG_SMALLEST"
-
-        gnuplot << "EOF"
-    set terminal png size 1600, 900
-    set output "$OUTPUT_PNG_SMALLEST"
-    set title "50 Smallest Factories (Based on Maximum Capacity)"
-    set ylabel "Volume (M.m³)"
-    set style data histogram
-    set style histogram gap 1
-    set style fill solid border -1
-    set boxwidth 0.9
-    set xtics rotate by -45
-    set xtics font ",6"
-    set auto x
-    plot '-' using 2:xtic(1) title "$HISTO_TYPE Volume" linecolor rgb "blue"
+        gnuplot <<EOF
+set datafile separator ";"
+set datafile commentschars ""
+set terminal png size 1600,900
+set output "$OUT_SMALLEST"
+set title "50 Smallest Factories ($TITLE)"
+set ylabel "Volume (k.m3.year-1)"
+set xlabel "Factory ID"
+set style data histogram
+set style histogram gap 1
+set style fill solid border -1
+set boxwidth 0.9
+set xtics rotate by -45 font ",6"
+set grid ytics
+plot '-' using 2:xtic(1) title "$TITLE" lc rgb "blue"
 $SMALLEST_50
 e
 EOF
 
-        if [ $? -ne 0 ]; then
-            error_exit "GnuPlot failed to generate image for smallest factories."
-        fi
-
-        echo "Histogram image generation completed."
+        echo "✅ Histogram generation completed"
         ;;
 
-    "leaks")
-        FACTORY_ID=$ARG3
+    leaks)
+        FACTORY_ID="$ARG3"
         
         if [ -z "$FACTORY_ID" ]; then
-            error_exit "Factory identifier missing for 'leaks' command."
+            error_exit "Factory ID missing. Usage: ./script.sh <data.dat> leaks \"Facility complex #XXXXX\""
         fi
         
-        if [ ! -z "$ARG4" ]; then
-            error_exit "Unexpected additional argument(s) for 'leaks' command."
+        echo "Calculating leaks for factory: $FACTORY_ID"
+        
+        /usr/bin/time -f "%M" -o "$TIME_OUTPUT_FILE" \
+            $C_EXECUTABLE "$CSV_FILE" leaks "$FACTORY_ID" \
+            || error_exit "C program failed"
+
+        echo "Max memory used by C: $(cat "$TIME_OUTPUT_FILE") KB"
+        
+        if [ -f "leaks.dat" ]; then
+            echo "✅ Leaks calculation completed"
+            echo "Results:"
+            tail -n 1 leaks.dat
+        else
+            error_exit "leaks.dat file not generated"
         fi
-
-        echo "Processing : Calculating leaks for factory '$FACTORY_ID'."
-
-        /usr/bin/time -f "%M" -o "$TIME_OUTPUT_FILE" $C_EXECUTABLE leaks "$CSV_FILE" "$FACTORY_ID"
-        C_RETURN_CODE=$?
-
-        MAX_MEMORY_KB=$(cat "$TIME_OUTPUT_FILE")
-        echo "Maximum memory used by C (Max RSS): ${MAX_MEMORY_KB} KB"
-
-        if [ $C_RETURN_CODE -ne 0 ]; then
-            error_exit "C program returned an error ($C_RETURN_CODE) during 'leaks' processing."
-        fi
-
-        echo "Leak calculation and performance history file update completed."
         ;;
 
     *)
-        error_exit "Command '$COMMAND' not recognized. Must be 'histo' or 'leaks'."
+        error_exit "Invalid command: $COMMAND (use 'histo' or 'leaks')"
         ;;
 esac
-
-exit 0
