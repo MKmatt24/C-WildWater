@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-// AVL Structure
+
 typedef struct AVLNode {
     void *data;
     struct AVLNode *left;
@@ -11,7 +11,7 @@ typedef struct AVLNode {
     int height;
 } AVLNode;
 
-// Fonctions de base de l'AVL
+
 AVLNode* avl_create_node(void *data);
 int avl_height(AVLNode *node);
 int avl_max(int a, int b);
