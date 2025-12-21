@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "avl.h"
 
+//Basic AVL functions 
 AVLNode* avl_create_node(void *data) {
     AVLNode *node = (AVLNode*)malloc(sizeof(AVLNode));
     if (!node) return NULL;
