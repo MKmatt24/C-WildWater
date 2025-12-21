@@ -15,9 +15,9 @@ echo Bienvenue sur C-WildWater!
 
 
 
-##############################################
+
 # Timer and temp files
-##############################################
+
 START_TIME=$(date +%s%3N)
 C_EXECUTABLE="./C-WildWater"
 TIME_OUTPUT_FILE=$(mktemp)
@@ -35,9 +35,9 @@ error_exit() {
     exit 1
 }
 
-##############################################
+
 # Dependency & compilation
-##############################################
+
 command -v gnuplot >/dev/null 2>&1 || error_exit "gnuplot not installed"
 
 echo "Checking and compiling C program..."
@@ -45,9 +45,9 @@ make || error_exit "Compilation failed"
 echo "Compilation OK → $C_EXECUTABLE"
 echo "---"
 
-##############################################
+
 # Arguments
-##############################################
+
 DATA_FILE="$1"
 COMMAND="$2"
 ARG3="$3"
@@ -58,18 +58,18 @@ fi
 
 [ ! -f "$DATA_FILE" ] && error_exit "Data file not found: $DATA_FILE"
 
-##############################################
+
 # CSV conversion
-##############################################
+
 echo "Converting data file to CSV..."
 echo "Factory_ID;Upstream_ID;Downstream_ID;Volume;Loss_Percentage" > "$CSV_FILE"
 cat "$DATA_FILE" >> "$CSV_FILE"
 echo "Temporary CSV: $CSV_FILE"
 echo "---"
 
-##############################################
+
 # Command processing
-##############################################
+
 case "$COMMAND" in
     histo)
         HISTO_TYPE="$ARG3"
