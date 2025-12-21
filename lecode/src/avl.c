@@ -86,6 +86,7 @@ void* avl_search(AVLNode *root, const char *id, int (*compare)(const void*, cons
     else return avl_search(root->right, id, compare);
 }
 
+//Thanks to "void (*print_data)(void*, FILE*)" we can generalize this function and have just one function for the AVL display
 void avl_inorder_reverse(AVLNode *root, FILE *file, void (*print_data)(void*, FILE*)) {
     if (root == NULL) return;
     avl_inorder_reverse(root->right, file, print_data);
