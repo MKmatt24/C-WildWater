@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-// Structure de l'arbre AVL générique
+// AVL Structure
 typedef struct AVLNode {
     void *data;
     struct AVLNode *left;
