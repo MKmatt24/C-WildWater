@@ -17,7 +17,9 @@ int main(int argc, char *argv[]) {
         return 2;
     }
 
+    //Review all the arguments
     for (int i = 2; i < argc; i++) {
+        //Case 1 : max command
         if (strcmp(argv[i], "max") == 0 && (i + 1) < argc) {
             FILE* out = fopen(argv[i+1], "w");
             if (!out) {
@@ -30,6 +32,7 @@ int main(int argc, char *argv[]) {
             fclose(out);
             i++;
         } 
+        //Case 2 : src command    
         else if (strcmp(argv[i], "src") == 0 && (i + 1) < argc) {
             FILE* out = fopen(argv[i+1], "w");
             if (!out) {
@@ -42,6 +45,7 @@ int main(int argc, char *argv[]) {
             fclose(out);
             i++;
         }
+        //Case 3 : real command
         else if (strcmp(argv[i], "real") == 0 && (i + 1) < argc) {
             FILE* out = fopen(argv[i+1], "w");
             if (!out) {
@@ -54,6 +58,7 @@ int main(int argc, char *argv[]) {
             fclose(out);
             i++;
         }
+        //Case 4 : leaks command
         else if (strcmp(argv[i], "leaks") == 0 && (i + 1) < argc) {
             char *target_factory = argv[i+1];
             Factory *f_data = (Factory*)avl_search(root, target_factory, search_factory);
@@ -68,19 +73,37 @@ int main(int argc, char *argv[]) {
             if (!f_data) {
                 fprintf(out, "%s;-1\n", target_factory);
                 fclose(out);
-            } else {
+            } 
+            else {
                 fclose(out);
                 
                 AVLNode *lookup_tree = NULL;
                 NetworkNode *net_root = calloc(1, sizeof(NetworkNode));
-                if (!net_root) { i++; continue; }
+                if (!net_root) { 
+                    i++; 
+                    continue;
+                }
                 net_root->id = strdup(target_factory);
-                if (!net_root->id) { free(net_root); i++; continue; }
-                
+                if (!net_root->id) { 
+                    free(net_root); 
+                    i++; 
+                    continue; 
+                }
                 NodeLookup *nl = malloc(sizeof(NodeLookup));
-                if (!nl) { free(net_root->id); free(net_root); i++; continue; }
+                if (!nl) { 
+                    free(net_root->id); 
+                    free(net_root); 
+                    i++; 
+                    continue; 
+                }
                 nl->id = strdup(target_factory);
-                if (!nl->id) { free(nl); free(net_root->id); free(net_root); i++; continue; }
+                if (!nl->id) { 
+                    free(nl); 
+                    free(net_root->id); 
+                    free(net_root); 
+                    i++; 
+                    continue; 
+                }
                 nl->node_ptr = net_root;
                 lookup_tree = avl_insert(lookup_tree, nl, compare_node_lookup);
 
@@ -93,8 +116,9 @@ int main(int argc, char *argv[]) {
                     iteration++;
                     
                     FILE *data_file = fopen(argv[1], "r");
-                    if (!data_file) break;
-                    
+                    if (!data_file) {
+                        break;
+                    }
                     char line[MAX_LINE];
                     int line_num = 0;
                     
@@ -113,23 +137,33 @@ int main(int argc, char *argv[]) {
                             t = strtok(NULL, ";\n");
                         }
                         
-                        if (j < 5) continue;
-
+                        if (j < 5) {
+                            continue;
+                        }
                         if (strcmp(c[0], target_factory) == 0 || 
                             (strcmp(c[0], "-") == 0 && strcmp(c[1], target_factory) == 0)) {
                             
-                            NodeLookup *existing_child = (NodeLookup*)avl_search(lookup_tree, c[2], search_node_lookup);
-                            if (existing_child) continue;
-                            
-                            NodeLookup *parent = (NodeLookup*)avl_search(lookup_tree, c[1], search_node_lookup);
+                            NodeLookup *existing_child = avl_search(lookup_tree, c[2], search_node_lookup);
+                            if (existing_child) {
+                                continue;
+                            }
+                            NodeLookup *parent = avl_search(lookup_tree, c[1], search_node_lookup);
                             if (parent) {
                                 NetworkNode *child = calloc(1, sizeof(NetworkNode));
-                                if (!child) continue;
+                                if (!child) {
+                                    continue;
+                                }
                                 child->id = strdup(c[2]);
-                                if (!child->id) { free(child); continue; }
-                                
+                                if (!child->id) { 
+                                    free(child); 
+                                    continue; 
+                                }
                                 ChildNode *new_c = malloc(sizeof(ChildNode));
-                                if (!new_c) { free(child->id); free(child); continue; }
+                                if (!new_c) { 
+                                    free(child->id); 
+                                    free(child); 
+                                    continue; 
+                                }
                                 new_c->node = child;
                                 new_c->leak_percentage = atof(c[4]);
                                 new_c->next = parent->node_ptr->children;
@@ -138,9 +172,14 @@ int main(int argc, char *argv[]) {
                                 parent->node_ptr->num_children++;
                                 
                                 NodeLookup *new_l = malloc(sizeof(NodeLookup));
-                                if (!new_l) continue;
+                                if (!new_l) {
+                                    continue;
+                                }
                                 new_l->id = strdup(c[2]);
-                                if (!new_l->id) { free(new_l); continue; }
+                                if (!new_l->id) { 
+                                    free(new_l); 
+                                    continue; 
+                                }
                                 new_l->node_ptr = child;
                                 lookup_tree = avl_insert(lookup_tree, new_l, compare_node_lookup);
                                 
@@ -165,7 +204,6 @@ int main(int argc, char *argv[]) {
             }
             i++;
         }
-        
         else {
             fprintf(stderr, "Error: Unknown argument '%s'\n", argv[i]);
             avl_free(root, free_factory);
