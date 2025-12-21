@@ -4,27 +4,33 @@
 #include <stdio.h>
 #include "functions.h"
 
+//Factory line verification
 bool check_factory_line(char** cols, int num_cols) {
-    if (num_cols < 5) return false;
+    if (num_cols < 5) {
+        return false;
+    }
     return (strcmp(cols[0], "-") == 0 && 
             strcmp(cols[2], "-") == 0 && 
             strcmp(cols[3], "-") != 0 &&
             strcmp(cols[4], "-") == 0);
 }
 
+//Source->Factory line verification
 bool check_source_line(char** cols, int num_cols) {
-    if (num_cols < 5) return false;
+    if (num_cols < 5) {
+        return false;
+    }
     return (strcmp(cols[0], "-") == 0 && 
             strcmp(cols[2], "-") != 0 && 
             strcmp(cols[4], "-") != 0);
 }
 
 int compare_factories(const void *a, const void *b) {
-    return strcmp(((Factory*)a)->id, ((Factory*)b)->id);
+    return strcmp(a->id, b->id);
 }
 
 int search_factory(const void *a, const char *id) {
-    return strcmp(((Factory*)a)->id, id);
+    return strcmp(a->id, id);
 }
 
 void free_factory(void *data) {
@@ -33,45 +39,47 @@ void free_factory(void *data) {
     free(f);
 }
 
+//Display functions
 void print_factory_max(void *data, FILE *file) {
-    Factory *f = (Factory*)data;
+    Factory *f = data;
     if (f->max_volume > 0.001) {
         fprintf(file, "%s;%.3f\n", f->id, f->max_volume);
     }
 }
 
 void print_factory_src(void *data, FILE *file) {
-    Factory *f = (Factory*)data;
+    Factory *f = data;
     if (f->source_volume > 0.001) {
         fprintf(file, "%s;%.3f\n", f->id, f->source_volume);
     }
 }
 
 void print_factory_real(void *data, FILE *file) {
-    Factory *f = (Factory*)data;
+    Factory *f = data;
     if (f->real_volume > 0.001) {
         fprintf(file, "%s;%.3f\n", f->id, f->real_volume);
     }
 }
 
-
+//Node comparison and search functions
 int compare_node_lookup(const void *a, const void *b) {
-    return strcmp(((NodeLookup*)a)->id, ((NodeLookup*)b)->id);
+    return strcmp(a->id, b->id);
 }
 
 int search_node_lookup(const void *a, const char *id) {
-    return strcmp(((NodeLookup*)a)->id, id);
+    return strcmp(a->id, id);
 }
 
 void free_lookup(void *data) {
-    NodeLookup *nl = (NodeLookup*)data;
+    NodeLookup *nl = data;
     free(nl->id);
     free(nl);
 }
 
 double compute_network_leaks(NetworkNode *node, double entering_volume) {
-    if (node == NULL || node->num_children == 0) return 0.0;
-
+    if (node == NULL || node->num_children == 0) {
+        return 0.0;
+    }
     double total_leaks = 0.0;
     double volume_per_child = entering_volume / node->num_children;
 
@@ -87,7 +95,9 @@ double compute_network_leaks(NetworkNode *node, double entering_volume) {
 }
 
 void free_network(NetworkNode *node) {
-    if (!node) return;
+    if (!node) {
+        return;
+    }
     ChildNode *curr = node->children;
     while (curr) {
         ChildNode *tmp = curr;
@@ -128,13 +138,14 @@ AVLNode* build_avl(const char *filename) {
             tmp = strtok(NULL, ";\n");
         }
         
-        if (i < 4) continue;
-        
+        if (i < 4) {
+            continue;
+        }
         Factory* p = NULL;
 
         if (check_factory_line(cols, i)) {
             factory_count++;
-            p = (Factory*)avl_search(root, cols[1], search_factory);
+            p = avl_search(root, cols[1], search_factory);
             if (!p) {
                 p = calloc(1, sizeof(Factory));
                 if (!p) {
@@ -155,7 +166,7 @@ AVLNode* build_avl(const char *filename) {
         }
         else if (check_source_line(cols, i)) {
             source_count++;
-            p = (Factory*)avl_search(root, cols[2], search_factory);
+            p = avl_search(root, cols[2], search_factory);
             if (!p) {
                 p = calloc(1, sizeof(Factory));
                 if (!p) {
