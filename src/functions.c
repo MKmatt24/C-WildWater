@@ -26,11 +26,11 @@ bool check_source_line(char** cols, int num_cols) {
 }
 
 int compare_factories(const void *a, const void *b) {
-    return strcmp(a->id, b->id);
+    return strcmp(((Factory*)a)->id, ((Factory*)b)->id);
 }
 
 int search_factory(const void *a, const char *id) {
-    return strcmp(a->id, id);
+    return strcmp(((Factory*)a)->id, id);
 }
 
 void free_factory(void *data) {
@@ -41,21 +41,21 @@ void free_factory(void *data) {
 
 //Display functions
 void print_factory_max(void *data, FILE *file) {
-    Factory *f = data;
+    Factory *f = (Factory*)data;
     if (f->max_volume > 0.001) {
         fprintf(file, "%s;%.3f\n", f->id, f->max_volume);
     }
 }
 
 void print_factory_src(void *data, FILE *file) {
-    Factory *f = data;
+    Factory *f = (Factory*)data;
     if (f->source_volume > 0.001) {
         fprintf(file, "%s;%.3f\n", f->id, f->source_volume);
     }
 }
 
 void print_factory_real(void *data, FILE *file) {
-    Factory *f = data;
+    Factory *f = (Factory*)data;
     if (f->real_volume > 0.001) {
         fprintf(file, "%s;%.3f\n", f->id, f->real_volume);
     }
@@ -63,15 +63,15 @@ void print_factory_real(void *data, FILE *file) {
 
 //Node comparison and search functions
 int compare_node_lookup(const void *a, const void *b) {
-    return strcmp(a->id, b->id);
+    return strcmp(((NodeLookup*)a)->id, ((NodeLookup*)b)->id);
 }
 
 int search_node_lookup(const void *a, const char *id) {
-    return strcmp(a->id, id);
+    return strcmp(((NodeLookup*)a)->id, id);
 }
 
 void free_lookup(void *data) {
-    NodeLookup *nl = data;
+    NodeLookup *nl = (NodeLookup*)data;
     free(nl->id);
     free(nl);
 }
@@ -145,7 +145,7 @@ AVLNode* build_avl(const char *filename) {
 
         if (check_factory_line(cols, i)) {
             factory_count++;
-            p = avl_search(root, cols[1], search_factory);
+            p = (Factory*)avl_search(root, cols[1], search_factory);
             if (!p) {
                 p = calloc(1, sizeof(Factory));
                 if (!p) {
@@ -166,7 +166,7 @@ AVLNode* build_avl(const char *filename) {
         }
         else if (check_source_line(cols, i)) {
             source_count++;
-            p = avl_search(root, cols[2], search_factory);
+            p = (Factory*)avl_search(root, cols[2], search_factory);
             if (!p) {
                 p = calloc(1, sizeof(Factory));
                 if (!p) {
