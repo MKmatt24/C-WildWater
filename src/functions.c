@@ -194,10 +194,6 @@ AVLNode* build_avl(const char *filename) {
 
     fclose(f);
     
-    fprintf(stderr, "DEBUG: Lines processed: %d\n", line_num);
-    fprintf(stderr, "DEBUG: Factory lines found: %d\n", factory_count);
-    fprintf(stderr, "DEBUG: Source lines found: %d\n", source_count);
-    
     return root;
 }
 
